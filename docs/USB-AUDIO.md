@@ -38,8 +38,8 @@ stems follow the MASTER knob, like the master, and sum to its dry part (before i
 
 On the FM-1, 15 October 2026: two minutes recorded clean (`tools/uac_stems.py`: the bass pair the same
 in every frame, no frame repeated; the FM-1's own count of short packets, dropped frames and late ones
-at 0). The audio load 35 % with the stream idle, 50 % while recording. Both were read off the Setup
-page then; it shows neither now. RAM 77,784 of 98,304 bytes with the screen reader in.
+at 0, read off a "USB" count the Setup page had then). CPU on the Setup page 35 % with the stream
+idle, 50 % while recording. RAM 77,784 of 98,304 bytes with the screen reader in.
 
 ### USB MIDI beside it
 
@@ -63,8 +63,7 @@ less to spare.
 1. The resampler's cost: the stream adds about 15 points of CPU. The cubic's four weights depend only
    on the position, so they can be worked out once per output frame and shared by the ten channels
    (four multiply-adds each instead of the whole polynomial), and the history could be indexed rather
-   than shifted. Measure the audio load before and after (`en_dbg.cpu_q8` in `main_fm1.c`; the Setup
-   page no longer shows it, so a temporary readout or a debug read).
+   than shifted. Measure the Setup page's CPU before and after.
 2. Channel names: hosts show channels 3-10 by number. UAC1's input terminal can point at string
    descriptors (`iChannelNames`) for "Pad L", "Pad R" and the rest.
 3. Whether the stems should be the normal build: about 25 KB of RAM and the CPU above, and a recorder
