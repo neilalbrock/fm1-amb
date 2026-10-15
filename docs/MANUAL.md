@@ -268,8 +268,6 @@ always KNOB 1. SELECT steps through them in this order.
 - **Lights:** On: the keys light the scale, and the unlit buttons glow dimly so they can be read
   on the black FM-1. Keys: the key lights only. Off.
 
-The top right of this page shows how much of the FM-1's time the sound takes (CPU).
-
 ---
 
 ## 8. MIDI

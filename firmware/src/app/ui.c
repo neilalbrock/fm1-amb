@@ -630,15 +630,11 @@ static void draw_header(void)
     int msg = plat_ms() < ui.msg_until;
     uint32_t h = hash(hash(hash(2166136261u, proj.piece | (uint32_t)proj.par[P_ROOT] << 8 | (uint32_t)proj.pool << 12),
                            en_playing | ui.dirty << 4 | (uint32_t)msg << 5 | (uint32_t)en_ext << 6 | (uint32_t)proj.par[P_MODE] << 8),
-                      (uint32_t)proj.par[P_TEMPO] | (ui.view == V_SETUP ? plat_cpu_pct() << 8 : 0u));
+                      (uint32_t)proj.par[P_TEMPO]);
     if (msg)
         h = hash(hash(h, (uint32_t)ui.msg[0][0] << 8 | ui.msg[0][1]), ui.msg_until);
     if (en_playing)
         h = hash(h, (en_bars / 4u) & 1u);
-#if EN_STEMS
-    if (ui.view == V_SETUP)
-        h = hash(h, plat_usb_audio_glitches());
-#endif
     if (h == ui.sig[0])
         return;
     ui.sig[0] = h;
@@ -659,24 +655,6 @@ static void draw_header(void)
             t[3] = 0;
         } else {
             itoa_u((uint32_t)proj.par[P_TEMPO], t);
-        }
-        if (ui.view == V_SETUP) {                 /* Setup: the audio load too */
-            char c[12] = "CPU ";
-            itoa_u(plat_cpu_pct(), c + 4);
-            x -= text_w(&FONT_XS, c);
-            cv_text(x, 8, &FONT_XS, c, K_DIM);
-            x -= 10;
-#if EN_STEMS
-            {                                     /* the stems build: the USB audio input's glitches */
-                char g[16] = "USB 999+";
-                uint32_t n = plat_usb_audio_glitches();
-                if (n <= 999u)
-                    itoa_u(n, g + 4);
-                x -= text_w(&FONT_XS, g);
-                cv_text(x, 8, &FONT_XS, g, K_DIM);
-                x -= 10;
-            }
-#endif
         }
         x -= text_w(&FONT_S, t);
         cv_text(x, 6, &FONT_S, t, en_playing ? K_TEXT : K_DIM);
@@ -1112,11 +1090,6 @@ static void sp_page(int all)
     sp_cat(sp_tp.playing ? ", growing" : ", resting");
     if (ui.dirty)
         sp_cat(", not saved yet");
-    if (ui.view == V_SETUP) {
-        sp_cat(". CPU ");
-        sp_int(plat_cpu_pct());
-        sp_cat("%");
-    }
 }
 
 /* the garden: the chord and how far to the next, the scale from the root up ("F and F sharp": one letter's

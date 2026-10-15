@@ -9,7 +9,7 @@ Ten channels: 1-2 the master, 3-4 the pad, 5-6 the bells, 7-8 the bass, 9-10 the
 is, and checks what can be checked without knowing the music: the bass is mono, so channels 7 and 8
 must be the same in every frame (a frame cut short or shifted breaks that), and a packet the FM-1 ran
 short of repeats its last frame, so a frame equal to the one before in all ten channels while anything
-sounds is counted. The FM-1's own count of USB glitches is on its Setup page ("USB n").
+sounds is counted.
 
 Exits 0 when the checks pass, 1 when not, 2 when there is no stems build to record."""
 import sys

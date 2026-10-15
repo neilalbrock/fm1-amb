@@ -51,9 +51,9 @@ Build option: `EN_CDC=1` adds Felucca's USB serial function (off by default: one
 MIDI interface).
 
 Build option: `EN_STEMS=1` gives the USB audio input ten channels: 1-2 the master, then the layers
-dry (3-4 pad, 5-6 bells, 7-8 bass, 9-10 pulse; the echo and the plate are the master's alone). The
-Setup page shows the input's glitches since boot ("USB n"); `tools/uac_stems.py` records and checks
-the ten channels, `tools/midi_clock_probe.py` times the MIDI clock with the stream idle and busy.
+dry (3-4 pad, 5-6 bells, 7-8 bass, 9-10 pulse; the echo and the plate are the master's alone).
+`tools/uac_stems.py` records and checks the ten channels, `tools/midi_clock_probe.py` times the MIDI
+clock with the stream idle and busy.
 `EN_UAC_CH=4..11` alone builds the packet-size probe instead (`tools/uac_probe.py`), and
 `EN_UAC_TICK=1` services the stream every 0.1 ms rather than every 0.5 ms (on with the stems: packets
 of 8 channels and up need it).

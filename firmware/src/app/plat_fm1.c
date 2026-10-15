@@ -90,11 +90,3 @@ int plat_store_save(uint32_t obj, const void *src, uint32_t len) { return flash_
 static volatile uint32_t audio_cpu_pct, audio_xruns;
 uint32_t plat_cpu_pct(void) { return audio_cpu_pct; }
 uint32_t plat_xruns(void) { return audio_xruns; }
-uint32_t plat_usb_audio_glitches(void)
-{
-#if FELUCCA_UAC
-    return uac.underruns + uac.overruns + uac.missed;
-#else
-    return 0;
-#endif
-}
