@@ -635,6 +635,10 @@ static void draw_header(void)
         h = hash(hash(h, (uint32_t)ui.msg[0][0] << 8 | ui.msg[0][1]), ui.msg_until);
     if (en_playing)
         h = hash(h, (en_bars / 4u) & 1u);
+#if EN_STEMS
+    if (ui.view == V_SETUP)
+        h = hash(h, plat_usb_audio_glitches());
+#endif
     if (h == ui.sig[0])
         return;
     ui.sig[0] = h;
@@ -662,6 +666,17 @@ static void draw_header(void)
             x -= text_w(&FONT_XS, c);
             cv_text(x, 8, &FONT_XS, c, K_DIM);
             x -= 10;
+#if EN_STEMS
+            {                                     /* the stems build: the USB audio input's glitches */
+                char g[16] = "USB 999+";
+                uint32_t n = plat_usb_audio_glitches();
+                if (n <= 999u)
+                    itoa_u(n, g + 4);
+                x -= text_w(&FONT_XS, g);
+                cv_text(x, 8, &FONT_XS, g, K_DIM);
+                x -= 10;
+            }
+#endif
         }
         x -= text_w(&FONT_S, t);
         cv_text(x, 6, &FONT_S, t, en_playing ? K_TEXT : K_DIM);

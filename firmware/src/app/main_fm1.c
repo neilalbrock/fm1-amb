@@ -16,6 +16,9 @@ extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
 _Static_assert(REND_FRAMES == UA_HALF, "usb.c sizes the USB audio ring band for this block");
 #endif
 static int32_t abuf[2u * HALF_WORDS] __attribute__((aligned(4)));
+#if EN_STEMS
+static int16_t stems[REND_FRAMES * 2u * EN_NSTEM];  /* the layers for the USB audio input (4 KB) */
+#endif
 
 #define DBG_MAGIC 0x44424731u                       /* "DBG1": read with `fm1t memr` */
 struct en_dbg {
@@ -35,9 +38,14 @@ static void render_block(int32_t *o)                /* ALNK0: one half, measured
     {
         uint32_t k;
         for (k = 0; k < HALF_FRAMES; k += REND_FRAMES) {
+#if EN_STEMS
+            en_render_stems(o + 2u * k, stems, REND_FRAMES, master_q12);
+            uac_tap(o + 2u * k, stems, REND_FRAMES);   /* the USB audio input: the master, then the layers */
+#else
             en_render(o + 2u * k, REND_FRAMES, master_q12);
 #if FELUCCA_UAC
-            uac_tap(o + 2u * k, REND_FRAMES);       /* the USB audio input: the same master output */
+            uac_tap(o + 2u * k, 0, REND_FRAMES);    /* the USB audio input: the same master output */
+#endif
 #endif
         }
     }
@@ -112,6 +120,12 @@ void fm1_timer5_irq(void)
         uart_midi_poll();                           /* the TRS jack: same context, same queue */
 #endif
     }
+#if FELUCCA_UAC && FELUCCA_UAC_TICK
+    /* EN_UAC_TICK: the stream every tick (0.1 ms), not every fifth: a packet that takes ~0.5 ms to
+     * send (8 channels and up) leaves the next no time when it waits up to 0.5 ms more to be queued */
+    else if (sub % 5u != 0u || !en_dbg.in_audio)
+        uac_service();
+#endif
     if (++sub == 10u)
         sub = 0;
     {

@@ -47,3 +47,5 @@ enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 /* audio load in % of the render budget, and xruns since boot (device: from the ISR) */
 uint32_t plat_cpu_pct(void);
 uint32_t plat_xruns(void);
+/* USB audio input: packets short of frames, frames dropped and packets not ready in time, since boot */
+uint32_t plat_usb_audio_glitches(void);

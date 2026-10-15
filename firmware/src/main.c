@@ -36,6 +36,22 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #define EN_UAC 1                  /* USB audio input: the master output, recordable over the cable */
 #endif
 #define FELUCCA_UAC EN_UAC
+#ifndef EN_STEMS
+#define EN_STEMS 0                /* 1: the layers too, on the USB audio input's channels 3-10 */
+#endif
+#if EN_STEMS && (!EN_UAC || defined(EN_UAC_CH))
+#error "EN_STEMS needs the USB audio input, and sets its channels itself"
+#endif
+#define FELUCCA_UAC_STEMS EN_STEMS
+#ifndef EN_UAC_CH
+#define EN_UAC_CH (EN_STEMS ? 10 : 2)   /* its channels; 4..11 alone: the packet-size probe (tools/uac_probe.py) */
+#endif
+#define FELUCCA_UAC_CH EN_UAC_CH
+#ifndef EN_UAC_TICK
+#define EN_UAC_TICK EN_STEMS      /* 1: the stream serviced every timer tick (0.1 ms), not every fifth;
+                                   * 8 channels and up need it (tools/uac_probe.py found) */
+#endif
+#define FELUCCA_UAC_TICK EN_UAC_TICK
 #ifndef FELUCCA_ID
 #define FELUCCA_ID "FM-1_700"     /* package identity (tools/build.py) */
 #endif

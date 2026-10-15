@@ -80,6 +80,18 @@ void en_clock(int msg);
 /* the render (audio ISR): n stereo frames, 24-bit in int32; gain Q12 (the MASTER pot) */
 void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 
+/* the layers on their own, for the USB audio input's channels 3-10 (EN_STEMS=1 builds): dry, since the
+ * echo and the plate are shared and so the master's alone; the bass is mono, the same on both sides */
+#ifndef EN_STEMS
+#define EN_STEMS 0
+#endif
+enum { EN_STEM_PAD, EN_STEM_BELLS, EN_STEM_BASS, EN_STEM_PULSE, EN_NSTEM };
+#if EN_STEMS
+/* en_render, and the layers: n frames of EN_NSTEM L R pairs, 16-bit, at the master's scale and gain
+ * but without its soft clip (so they sum to the master's dry part) */
+void en_render_stems(int32_t *out_lr, int16_t *stems, uint32_t n, uint32_t gain_q12);
+#endif
+
 /* MIDI out, from the render: the app sends it (USB); status, data 1, data 2 */
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 

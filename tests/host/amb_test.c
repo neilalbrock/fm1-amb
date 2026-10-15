@@ -297,6 +297,50 @@ int main(void)
         en_play(1);
     }
 
+#if EN_STEMS
+    /* the stems: each layer on its own pair, the bass the same on both sides, a layer turned down
+     * silent on its pair; with the echo and the plate off, the layers sum to the master (soft clip aside) */
+    {
+        static int16_t st[256 * 2 * EN_NSTEM];
+        const float k16 = 8300000.0f / 256.0f;
+        float spk[EN_NSTEM] = {0.0f}, worst = 0.0f;
+        int b2, j, s;
+        long bass_lr = 0;
+        en_init();
+        en_set(P_ECHO, 0);
+        en_set(P_REVERB, 0);
+        en_set(P_BELLS, 0);
+        en_play(1);
+        for (b2 = 0; b2 < 30 * 44100 / 256; b2++) {
+            en_render_stems(buf, st, 256, 2048);
+            for (j = 0; j < 256; j++) {
+                const int16_t *f = st + j * 2 * EN_NSTEM;
+                float sum[2] = {0.0f, 0.0f};
+                int c;
+                for (s = 0; s < EN_NSTEM; s++) {
+                    spk[s] = fmaxf(spk[s], fmaxf(fabsf((float)f[2 * s]), fabsf((float)f[2 * s + 1])));
+                    sum[0] += (float)f[2 * s];
+                    sum[1] += (float)f[2 * s + 1];
+                }
+                bass_lr += f[2 * EN_STEM_BASS] != f[2 * EN_STEM_BASS + 1];
+                for (c = 0; c < 2; c++)
+                    worst = fmaxf(worst, fabsf(tanhf(sum[c] / k16) * k16 - (float)buf[2 * j + c] / 256.0f));
+            }
+        }
+        CHECK(spk[EN_STEM_PAD] > 300.0f && spk[EN_STEM_BASS] > 300.0f && spk[EN_STEM_PULSE] > 300.0f,
+              "stems: pad %.0f, bass %.0f, pulse %.0f", (double)spk[EN_STEM_PAD], (double)spk[EN_STEM_BASS],
+              (double)spk[EN_STEM_PULSE]);
+        CHECK(spk[EN_STEM_BELLS] == 0.0f, "stems: the bells turned down, but %.0f", (double)spk[EN_STEM_BELLS]);
+        CHECK(bass_lr == 0, "stems: the bass differs between its sides %ld times", bass_lr);
+        CHECK(worst < 4.0f, "stems: the layers' sum is %.1f (16-bit) off the master", (double)worst);
+        printf("  stems: peaks pad %.0f, bells %.0f, bass %.0f, pulse %.0f; sum against the master %.1f at most\n",
+               (double)spk[EN_STEM_PAD], (double)spk[EN_STEM_BELLS], (double)spk[EN_STEM_BASS],
+               (double)spk[EN_STEM_PULSE], (double)worst);
+        en_init();
+        en_play(1);
+    }
+#endif
+
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)
         en_set(i, en_param_info(i)->def);

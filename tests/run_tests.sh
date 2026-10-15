@@ -23,9 +23,13 @@ run() {
 run fastmath sh -c "$CC -O2 -ffp-contract=off -Wall -Wextra -Werror -o $OUT/fastmath_test tests/host/fastmath_test.c -lm && $OUT/fastmath_test"
 run encoder sh -c "$CC -O2 -w -Ifirmware/hal -o $OUT/encoder_test tests/host/encoder_test.c && $OUT/encoder_test"
 run uac sh -c "$CC -O2 -w -Ifirmware/src -Ifirmware/hal -o $OUT/uac_test tests/host/uac_test.c -lm && $OUT/uac_test"
+run uac-probe sh -c "$CC -O2 -w -DFELUCCA_UAC_CH=11 -Ifirmware/src -Ifirmware/hal -o $OUT/uac_probe_test tests/host/uac_test.c -lm && $OUT/uac_probe_test"
+run uac-stems sh -c "$CC -O2 -w -DFELUCCA_UAC_STEMS=1 -DFELUCCA_UAC_CH=10 -Ifirmware/src -Ifirmware/hal -o $OUT/uac_stems_test tests/host/uac_test.c -lm && $OUT/uac_stems_test"
 run trs sh -c "$CC -O2 -w -Ifirmware/src -Ifirmware/hal -o $OUT/trs_test tests/host/trs_test.c && $OUT/trs_test"
 run amb sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -DEN_HOST -Ifirmware/src/dsp \
     -o $OUT/amb_test tests/host/amb_test.c firmware/src/dsp/amb.c && $OUT/amb_test"
+run amb-stems sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -DEN_HOST -DEN_STEMS=1 -Ifirmware/src/dsp \
+    -o $OUT/amb_stems_test tests/host/amb_test.c firmware/src/dsp/amb.c && $OUT/amb_stems_test"
 run storage sh -c "$CC -O2 -o $OUT/storage_test tests/storage_test.c && $OUT/storage_test"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
 if [ -f build/amb.fwsc ]; then

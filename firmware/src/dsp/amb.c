@@ -1431,6 +1431,15 @@ static void drain(void)
 /* --------------------------------------------------------------- render --- */
 #define BLK 256
 static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK];
+#if EN_STEMS
+/* the layers apart (en_render_stems): each writes its own, and the mix is their sum */
+static float stem_l[EN_NSTEM][BLK], stem_r[EN_NSTEM][BLK];
+#define LAYER_L(k) stem_l[k]
+#define LAYER_R(k) stem_r[k]
+#else
+#define LAYER_L(k) mixl
+#define LAYER_R(k) mixr
+#endif
 
 /* the pad's bus: a 12 dB low-pass, darker than it sounds on paper (Brian Eno darkened everything: the
  * Synthi's filter below half, then tape). No chorus: a modulated delay against pure tones beats (on
@@ -1452,8 +1461,8 @@ static void pad_bus(uint32_t n)
         plp[3] += c * (plp[2] - plp[3]);
         l = plp[1];
         r = plp[3];
-        mixl[j] += l * 0.8f;
-        mixr[j] += r * 0.8f;
+        LAYER_L(EN_STEM_PAD)[j] += l * 0.8f;
+        LAYER_R(EN_STEM_PAD)[j] += r * 0.8f;
         rsend[j] += (l + r) * 0.6f;
         esend[j] += (l + r) * 0.2f;
     }
@@ -1562,8 +1571,8 @@ static void render_bass(uint32_t n)
             ph -= 2.0f;
         amp += (tgt - amp) * rate;
         x *= amp * g;
-        mixl[j] += x;
-        mixr[j] += x;
+        LAYER_L(EN_STEM_BASS)[j] += x;
+        LAYER_R(EN_STEM_BASS)[j] += x;
         rsend[j] += x * 0.08f;
     }
     bass.ph = ph;
@@ -1593,8 +1602,8 @@ static void render_bells(uint32_t n)
             float m = sine(mph) * idx, x;
             float p = cph + m + 4.0f;            /* + 4 turns: positive for the table */
             x = sine(p) * amp * att * g;
-            mixl[j] += x * v->gl;
-            mixr[j] += x * v->gr;
+            LAYER_L(EN_STEM_BELLS)[j] += x * v->gl;
+            LAYER_R(EN_STEM_BELLS)[j] += x * v->gr;
             rsend[j] += x * 0.7f;
             esend[j] += x * 0.85f;
             cph += v->cinc;
@@ -1642,8 +1651,8 @@ static void render_hat(drum_t *v, uint32_t n, float g, float pl, float pr)
         x1 += hat_f * hp;
         x2 += hat_f * x1;
         x = hp * amp * att * g;
-        mixl[j] += x * pl;
-        mixr[j] += x * pr;
+        LAYER_L(EN_STEM_PULSE)[j] += x * pl;
+        LAYER_R(EN_STEM_PULSE)[j] += x * pr;
         rsend[j] += x * 0.2f;
         esend[j] += x * 0.08f;
         amp *= v->adec;
@@ -1666,8 +1675,8 @@ static void render_drums(uint32_t n)
         float ph = v->ph, inc = v->inc, amp = v->amp, att = v->att;
         for (j = 0; j < n; j++) {
             float x = sine(ph) * amp * att * g;
-            mixl[j] += x;
-            mixr[j] += x;
+            LAYER_L(EN_STEM_PULSE)[j] += x;
+            LAYER_R(EN_STEM_PULSE)[j] += x;
             rsend[j] += x * 0.1f;
             ph += inc;
             if (ph >= 1.0f)
@@ -1686,16 +1695,50 @@ static void render_drums(uint32_t n)
     render_hat(&drum[2], n, g * 0.14f, 1.0f, 0.7f);   /* open: a little left */
 }
 
-static void render_chunk(int32_t *out, uint32_t n, float gain)
+#if EN_STEMS
+static inline int16_t stem_s16(float x)
+{
+    x = fm_clampf(x, -32768.0f, 32767.0f);
+    return (int16_t)(x + (x >= 0.0f ? 0.5f : -0.5f));
+}
+#endif
+
+/* stems: NULL, or n frames of the layers (en_render_stems) */
+static void render_chunk(int32_t *out, int16_t *stems, uint32_t n, float gain)
 {
     uint32_t j;
     const float rg = rev_send * rev_in_gain * (1.0f - 0.25f * arcm), eg = echo_send;
     for (j = 0; j < n; j++)
         mixl[j] = mixr[j] = rsend[j] = esend[j] = 0.0f;
+#if EN_STEMS
+    {
+        int k;
+        for (k = 0; k < EN_NSTEM; k++)
+            for (j = 0; j < n; j++)
+                stem_l[k][j] = stem_r[k][j] = 0.0f;
+    }
+#else
+    (void)stems;
+#endif
     render_pad(n);
     render_bass(n);
     render_bells(n);
     render_drums(n);
+#if EN_STEMS
+    for (j = 0; j < n; j++) {
+        mixl[j] = stem_l[EN_STEM_PAD][j] + stem_l[EN_STEM_BASS][j] + stem_l[EN_STEM_BELLS][j] + stem_l[EN_STEM_PULSE][j];
+        mixr[j] = stem_r[EN_STEM_PAD][j] + stem_r[EN_STEM_BASS][j] + stem_r[EN_STEM_BELLS][j] + stem_r[EN_STEM_PULSE][j];
+    }
+    if (stems) {                                 /* the master's scale, 16-bit: its 24 bits over 256 */
+        const float k = 0.36f * gain * (8300000.0f / 256.0f);
+        int s;
+        for (j = 0; j < n; j++)
+            for (s = 0; s < EN_NSTEM; s++) {
+                stems[(j * EN_NSTEM + (uint32_t)s) * 2u] = stem_s16(stem_l[s][j] * k);
+                stems[(j * EN_NSTEM + (uint32_t)s) * 2u + 1u] = stem_s16(stem_r[s][j] * k);
+            }
+    }
+#endif
     for (j = 0; j < n; j++) {
         float wl, wr, l, r, el, er, xl, xr;
         echoes(esend[j] * eg, &el, &er, &xl, &xr);
@@ -1747,7 +1790,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
         en_drum_glow[i] *= 0.95f;
 }
 
-void en_render(int32_t *out, uint32_t n, uint32_t gain_q12)
+static void render(int32_t *out, int16_t *stems, uint32_t n, uint32_t gain_q12)
 {
     const float gain = (float)gain_q12 * (1.0f / 4096.0f) * 2.0f;
     drain();
@@ -1774,9 +1817,16 @@ void en_render(int32_t *out, uint32_t n, uint32_t gain_q12)
         if (timed)
             pulse_left -= (float)k;
         control(k);
-        render_chunk(out, k, gain);
+        render_chunk(out, stems, k, gain);
         drums_wait_step((int32_t)k);
         out += 2 * k;
+        if (stems)
+            stems += 2u * EN_NSTEM * k;
         n -= k;
     }
 }
+
+void en_render(int32_t *out, uint32_t n, uint32_t gain_q12) { render(out, 0, n, gain_q12); }
+#if EN_STEMS
+void en_render_stems(int32_t *out, int16_t *stems, uint32_t n, uint32_t gain_q12) { render(out, stems, n, gain_q12); }
+#endif

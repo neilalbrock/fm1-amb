@@ -138,6 +138,7 @@ int plat_store_save(uint32_t obj, const void *src, uint32_t len)
 static uint32_t cpu_pct;
 uint32_t plat_cpu_pct(void) { return cpu_pct; }
 uint32_t plat_xruns(void) { return 0; }
+uint32_t plat_usb_audio_glitches(void) { return 0; }
 
 /* -------------------------------------------------------------- app --- */
 #include "../firmware/src/app/app.h"

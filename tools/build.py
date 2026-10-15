@@ -201,10 +201,17 @@ def build_loader():
 
 def build_app():
     flags = [*CFLAGS, *FPU, "-Ifirmware/hal", "-Ifirmware/src", "-Ibuild/gen"]
-    for flag in ("EN_CDC",):
+    for flag in ("EN_CDC", "EN_UAC_TICK", "EN_STEMS"):
         v = os.environ.get(flag)    # unset: the default in firmware/src/main.c
         if v in ("0", "1"):
             flags.append(f"-D{flag}={v}")
+    v = os.environ.get("EN_UAC_CH")  # the USB audio input's channels; 4..11: the packet-size probe
+    if v and os.environ.get("EN_STEMS") == "1":
+        raise SystemExit("EN_STEMS=1 sets the USB audio input's channels itself: leave out EN_UAC_CH")
+    if v:
+        if not v.isdigit() or not (int(v) == 2 or 4 <= int(v) <= 11):
+            raise SystemExit(f"EN_UAC_CH={v}: 2, or 4..11 for the probe")
+        flags.append(f"-DEN_UAC_CH={v}")
     flags.append(f'-DFELUCCA_ID="{PRODUCT}"')
     if VERSION:
         flags.append(f'-DEN_VERSION="{VERSION}"')
