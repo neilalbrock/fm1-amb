@@ -37,6 +37,35 @@ and what each button did.
 
 The [manual](https://charlesvestal.github.io/fm1-amb/manual/) has the rest.
 
+## The layers over USB (stems)
+
+Plugged into a computer, the FM-1 is also an audio input: AMB-1's master as 16-bit stereo at
+44.1 kHz, ready to record over the cable. The stems firmware makes it ten channels, so the layers
+can be recorded apart:
+
+| Channels | |
+|---|---|
+| 1–2 | the master, as you hear it |
+| 3–4 | the pad |
+| 5–6 | the bells |
+| 7–8 | the bass (mono, the same on both) |
+| 9–10 | the pulse |
+
+The layers are dry: the echo, the tape loop and the plate are shared by all four, so only the master
+has them. They follow the MASTER knob, as the master does. USB MIDI works beside them as before.
+
+To install it, take `amb-1.2.1-stems-10ch.fwsc` from this fork's
+[releases](https://github.com/neilalbrock/fm1-amb/releases) and, with the FM-1 plugged in:
+
+```
+pip3 install mido python-rtmidi
+python3 tools/fm1_install.py amb-1.2.1-stems-10ch.fwsc
+```
+
+or build it yourself with `EN_STEMS=1 ./build.sh`. (The web installer puts on the stereo AMB-1.)
+Recording apps then see "AMB-1 FM-1" with ten inputs; `tools/uac_stems.py` records them to a file
+and checks them. What was measured on the way, and what's next: [docs/USB-AUDIO.md](docs/USB-AUDIO.md).
+
 ## Building and testing
 
 The toolchain is the same as X0X's (see [BUILDING.md](BUILDING.md)):
