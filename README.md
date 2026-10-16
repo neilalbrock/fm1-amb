@@ -56,6 +56,10 @@ The layers are dry: the echo, the tape loop and the plate are shared by all four
 has them. They come at the master's line level, whatever the MASTER knob. USB MIDI works beside them
 as before.
 
+![Ableton Live recording AMB-1 over one USB cable: each layer's notes (MIDI channels 1, 2, 3 and 10) above its dry stem (inputs 3–10), and the master on inputs 1–2](docs/img/ableton_fm1-amb.png)
+
+*One take in Ableton Live: each layer's MIDI above its dry stem, and the master at the bottom.*
+
 To install it, take `amb-1.2.2-stems-10ch.fwsc` from this fork's
 [releases](https://github.com/neilalbrock/fm1-amb/releases) and, with the FM-1 plugged in:
 
