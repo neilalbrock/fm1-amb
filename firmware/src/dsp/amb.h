@@ -86,11 +86,12 @@ void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 #define EN_STEMS 0
 #endif
 enum { EN_STEM_PAD, EN_STEM_BELLS, EN_STEM_BASS, EN_STEM_PULSE, EN_NSTEM };
-#if EN_STEMS
-/* en_render, and the layers: n frames of EN_NSTEM L R pairs, 16-bit, at the master's scale and gain
- * but without its soft clip (so they sum to the master's dry part) */
-void en_render_stems(int32_t *out_lr, int16_t *stems, uint32_t n, uint32_t gain_q12);
-#endif
+/* en_render, and the USB audio input's: usb, n stereo frames of the same master at the line level
+ * (EN_LINE_GAIN, where MASTER sits at about 70%), whatever the MASTER pot, soft-clipped on its own;
+ * and in EN_STEMS=1 builds the layers: stems, n frames of EN_NSTEM L R pairs, 16-bit, at the USB
+ * master's scale and gain but without its soft clip (so they sum to its dry part). Else stems is unused. */
+#define EN_LINE_GAIN 1.0f
+void en_render_usb(int32_t *out_lr, int32_t *usb_lr, int16_t *stems, uint32_t n, uint32_t gain_q12);
 
 /* MIDI out, from the render: the app sends it (USB); status, data 1, data 2 */
 void en_midi_out(uint32_t st, uint32_t d1, uint32_t d2);

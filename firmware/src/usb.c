@@ -883,8 +883,8 @@ static inline uint16_t uac_s16(float y)
     return (uint16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
 }
 
-/* audio ISR: one block in, the master 24-bit in int32 (X0X); st: the stems, n frames of 8 16-bit
- * samples (pad L R, bells, bass, pulse; en_render_stems), with FELUCCA_UAC_STEMS only */
+/* audio ISR: one block in, the master at the line level 24-bit in int32 (X0X); st: the stems, n frames of 8 16-bit
+ * samples (pad L R, bells, bass, pulse; en_render_usb), with FELUCCA_UAC_STEMS only */
 static __attribute__((noinline)) void uac_tap(const int32_t *out, const int16_t *st, uint32_t n)
 {
     uint32_t w = ua_w, i, c;

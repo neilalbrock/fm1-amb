@@ -299,9 +299,11 @@ int main(void)
 
 #if EN_STEMS
     /* the stems: each layer on its own pair, the bass the same on both sides, a layer turned down
-     * silent on its pair; with the echo and the plate off, the layers sum to the master (soft clip aside) */
+     * silent on its pair; with the echo and the plate off, the layers sum to the USB master (soft clip
+     * aside), whatever MASTER says */
     {
         static int16_t st[256 * 2 * EN_NSTEM];
+        static int32_t usb[2 * 256];
         const float k16 = 8300000.0f / 256.0f;
         float spk[EN_NSTEM] = {0.0f}, worst = 0.0f;
         int b2, j, s;
@@ -312,7 +314,7 @@ int main(void)
         en_set(P_BELLS, 0);
         en_play(1);
         for (b2 = 0; b2 < 30 * 44100 / 256; b2++) {
-            en_render_stems(buf, st, 256, 2048);
+            en_render_usb(buf, usb, st, 256, 3000);
             for (j = 0; j < 256; j++) {
                 const int16_t *f = st + j * 2 * EN_NSTEM;
                 float sum[2] = {0.0f, 0.0f};
@@ -324,7 +326,7 @@ int main(void)
                 }
                 bass_lr += f[2 * EN_STEM_BASS] != f[2 * EN_STEM_BASS + 1];
                 for (c = 0; c < 2; c++)
-                    worst = fmaxf(worst, fabsf(tanhf(sum[c] / k16) * k16 - (float)buf[2 * j + c] / 256.0f));
+                    worst = fmaxf(worst, fabsf(tanhf(sum[c] / k16) * k16 - (float)usb[2 * j + c] / 256.0f));
             }
         }
         CHECK(spk[EN_STEM_PAD] > 300.0f && spk[EN_STEM_BASS] > 300.0f && spk[EN_STEM_PULSE] > 300.0f,
@@ -332,7 +334,7 @@ int main(void)
               (double)spk[EN_STEM_PULSE]);
         CHECK(spk[EN_STEM_BELLS] == 0.0f, "stems: the bells turned down, but %.0f", (double)spk[EN_STEM_BELLS]);
         CHECK(bass_lr == 0, "stems: the bass differs between its sides %ld times", bass_lr);
-        CHECK(worst < 4.0f, "stems: the layers' sum is %.1f (16-bit) off the master", (double)worst);
+        CHECK(worst < 4.0f, "stems: the layers' sum is %.1f (16-bit) off the USB master", (double)worst);
         printf("  stems: peaks pad %.0f, bells %.0f, bass %.0f, pulse %.0f; sum against the master %.1f at most\n",
                (double)spk[EN_STEM_PAD], (double)spk[EN_STEM_BELLS], (double)spk[EN_STEM_BASS],
                (double)spk[EN_STEM_PULSE], (double)worst);
@@ -340,6 +342,38 @@ int main(void)
         en_play(1);
     }
 #endif
+
+    /* the USB audio input: the master at the line level whatever MASTER says; MASTER at the line
+     * level gives the same samples on both, MASTER down silences only the FM-1's own output */
+    {
+        static int32_t usb[2 * 256];
+        static const uint32_t GAIN[3] = {2048, 0, 4096};
+        float upk[3] = {0.0f}, opk[3] = {0.0f};
+        long diff = 0;
+        int b2, j, g;
+        en_init();
+        en_play(1);
+        for (b2 = 0; b2 < 30 * 44100 / 256; b2++) {
+            g = b2 % 3;
+            en_render_usb(buf, usb, 0, 256, GAIN[g]);
+            for (j = 0; j < 512; j++) {
+                upk[g] = fmaxf(upk[g], fabsf((float)usb[j]));
+                opk[g] = fmaxf(opk[g], fabsf((float)buf[j]));
+                diff += g == 0 && usb[j] != buf[j];
+            }
+        }
+        CHECK(diff == 0, "line level: MASTER at the line level, but %ld samples differ", diff);
+        CHECK(opk[1] == 0.0f, "line level: MASTER down, the output still %.0f", (double)opk[1]);
+        CHECK(upk[0] > 1e6f && upk[1] > 1e6f && upk[2] > 1e6f, "line level: USB peaks %.0f %.0f %.0f",
+              (double)upk[0], (double)upk[1], (double)upk[2]);
+        CHECK(opk[2] > upk[2], "line level: MASTER up, the output %.0f not above USB %.0f", (double)opk[2],
+              (double)upk[2]);
+        printf("  line level: USB peaks %.1f dBFS (output at MASTER full %.1f dBFS)\n",
+               (double)(20.0f * log10f(fmaxf(fmaxf(upk[0], upk[1]), upk[2]) / 8388608.0f)),
+               (double)(20.0f * log10f(opk[2] / 8388608.0f)));
+        en_init();
+        en_play(1);
+    }
 
     /* stop: the tails die away */
     for (i = 0; i < P_NPARAMS; i++)

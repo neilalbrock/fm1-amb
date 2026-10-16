@@ -16,6 +16,9 @@ extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
 _Static_assert(REND_FRAMES == UA_HALF, "usb.c sizes the USB audio ring band for this block");
 #endif
 static int32_t abuf[2u * HALF_WORDS] __attribute__((aligned(4)));
+#if FELUCCA_UAC
+static int32_t ubuf[2u * REND_FRAMES];              /* the USB audio input's master, at the line level (2 KB) */
+#endif
 #if EN_STEMS
 static int16_t stems[REND_FRAMES * 2u * EN_NSTEM];  /* the layers for the USB audio input (4 KB) */
 #endif
@@ -39,13 +42,14 @@ static void render_block(int32_t *o)                /* ALNK0: one half, measured
         uint32_t k;
         for (k = 0; k < HALF_FRAMES; k += REND_FRAMES) {
 #if EN_STEMS
-            en_render_stems(o + 2u * k, stems, REND_FRAMES, master_q12);
-            uac_tap(o + 2u * k, stems, REND_FRAMES);   /* the USB audio input: the master, then the layers */
+            en_render_usb(o + 2u * k, ubuf, stems, REND_FRAMES, master_q12);
+            uac_tap(ubuf, stems, REND_FRAMES);      /* the USB audio input: the master, then the layers */
+#elif FELUCCA_UAC
+            /* the USB audio input: the same master at the line level, MASTER sets only the speaker */
+            en_render_usb(o + 2u * k, ubuf, 0, REND_FRAMES, master_q12);
+            uac_tap(ubuf, 0, REND_FRAMES);
 #else
             en_render(o + 2u * k, REND_FRAMES, master_q12);
-#if FELUCCA_UAC
-            uac_tap(o + 2u * k, 0, REND_FRAMES);    /* the USB audio input: the same master output */
-#endif
 #endif
         }
     }

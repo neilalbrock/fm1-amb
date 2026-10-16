@@ -1432,7 +1432,7 @@ static void drain(void)
 #define BLK 256
 static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK];
 #if EN_STEMS
-/* the layers apart (en_render_stems): each writes its own, and the mix is their sum */
+/* the layers apart (en_render_usb): each writes its own, and the mix is their sum */
 static float stem_l[EN_NSTEM][BLK], stem_r[EN_NSTEM][BLK];
 #define LAYER_L(k) stem_l[k]
 #define LAYER_R(k) stem_r[k]
@@ -1703,8 +1703,9 @@ static inline int16_t stem_s16(float x)
 }
 #endif
 
-/* stems: NULL, or n frames of the layers (en_render_stems) */
-static void render_chunk(int32_t *out, int16_t *stems, uint32_t n, float gain)
+/* usb: NULL, or n frames for the USB audio input, at the line level; stems: NULL, or n frames of the
+ * layers (en_render_usb) */
+static void render_chunk(int32_t *out, int32_t *usb, int16_t *stems, uint32_t n, float gain)
 {
     uint32_t j;
     const float rg = rev_send * rev_in_gain * (1.0f - 0.25f * arcm), eg = echo_send;
@@ -1729,8 +1730,8 @@ static void render_chunk(int32_t *out, int16_t *stems, uint32_t n, float gain)
         mixl[j] = stem_l[EN_STEM_PAD][j] + stem_l[EN_STEM_BASS][j] + stem_l[EN_STEM_BELLS][j] + stem_l[EN_STEM_PULSE][j];
         mixr[j] = stem_r[EN_STEM_PAD][j] + stem_r[EN_STEM_BASS][j] + stem_r[EN_STEM_BELLS][j] + stem_r[EN_STEM_PULSE][j];
     }
-    if (stems) {                                 /* the master's scale, 16-bit: its 24 bits over 256 */
-        const float k = 0.36f * gain * (8300000.0f / 256.0f);
+    if (stems) {                                 /* the USB master's scale, 16-bit: its 24 bits over 256 */
+        const float k = 0.36f * EN_LINE_GAIN * (8300000.0f / 256.0f);
         int s;
         for (j = 0; j < n; j++)
             for (s = 0; s < EN_NSTEM; s++) {
@@ -1743,10 +1744,14 @@ static void render_chunk(int32_t *out, int16_t *stems, uint32_t n, float gain)
         float wl, wr, l, r, el, er, xl, xr;
         echoes(esend[j] * eg, &el, &er, &xl, &xr);
         reverb((rsend[j] * rg + (el + er + xl + xr) * 0.35f * rev_send) * 0.8f, &wl, &wr);
-        l = (mixl[j] + 0.75f * el + 0.3f * xl + 1.3f * wl) * 0.36f * gain;
-        r = (mixr[j] + 0.75f * er + 0.3f * xr + 1.3f * wr) * 0.36f * gain;
-        out[2 * j] = (int32_t)(fm_tanhf(l) * 8300000.0f);
-        out[2 * j + 1] = (int32_t)(fm_tanhf(r) * 8300000.0f);
+        l = (mixl[j] + 0.75f * el + 0.3f * xl + 1.3f * wl) * 0.36f;
+        r = (mixr[j] + 0.75f * er + 0.3f * xr + 1.3f * wr) * 0.36f;
+        out[2 * j] = (int32_t)(fm_tanhf(l * gain) * 8300000.0f);
+        out[2 * j + 1] = (int32_t)(fm_tanhf(r * gain) * 8300000.0f);
+        if (usb) {                               /* the same mix at the line level, soft-clipped on its own */
+            usb[2 * j] = (int32_t)(fm_tanhf(l * EN_LINE_GAIN) * 8300000.0f);
+            usb[2 * j + 1] = (int32_t)(fm_tanhf(r * EN_LINE_GAIN) * 8300000.0f);
+        }
     }
 }
 
@@ -1790,7 +1795,7 @@ static void control(uint32_t n)                 /* once a chunk: the slow things
         en_drum_glow[i] *= 0.95f;
 }
 
-static void render(int32_t *out, int16_t *stems, uint32_t n, uint32_t gain_q12)
+static void render(int32_t *out, int32_t *usb, int16_t *stems, uint32_t n, uint32_t gain_q12)
 {
     const float gain = (float)gain_q12 * (1.0f / 4096.0f) * 2.0f;
     drain();
@@ -1817,16 +1822,19 @@ static void render(int32_t *out, int16_t *stems, uint32_t n, uint32_t gain_q12)
         if (timed)
             pulse_left -= (float)k;
         control(k);
-        render_chunk(out, stems, k, gain);
+        render_chunk(out, usb, stems, k, gain);
         drums_wait_step((int32_t)k);
         out += 2 * k;
+        if (usb)
+            usb += 2 * k;
         if (stems)
             stems += 2u * EN_NSTEM * k;
         n -= k;
     }
 }
 
-void en_render(int32_t *out, uint32_t n, uint32_t gain_q12) { render(out, 0, n, gain_q12); }
-#if EN_STEMS
-void en_render_stems(int32_t *out, int16_t *stems, uint32_t n, uint32_t gain_q12) { render(out, stems, n, gain_q12); }
-#endif
+void en_render(int32_t *out, uint32_t n, uint32_t gain_q12) { render(out, 0, 0, n, gain_q12); }
+void en_render_usb(int32_t *out, int32_t *usb, int16_t *stems, uint32_t n, uint32_t gain_q12)
+{
+    render(out, usb, EN_STEMS ? stems : 0, n, gain_q12);
+}

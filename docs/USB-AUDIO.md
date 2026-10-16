@@ -26,10 +26,15 @@ frames were always 11,025 frames old). Looking every timer tick puts the next pa
 
 Ten channels: 1-2 the master, 3-4 the pad, 5-6 the bells, 7-8 the bass (mono, on both), 9-10 the pulse.
 The layers are dry: the echo and the plate are shared by all four, so only the master has them. The
-stems follow the MASTER knob, like the master, and sum to its dry part (before its soft clip).
+stems come at the USB master's level and sum to its dry part (before its soft clip).
+
+The USB master and the stems keep a steady line level (`EN_LINE_GAIN`, where MASTER sits at about
+70%), whatever the MASTER knob: `en_render_usb` soft-clips the same mix twice, once at the knob's gain
+for the FM-1's own output, once at the line level for USB. The FM-1's own output is as it was, sample
+for sample.
 
 - `amb.c`: each layer renders into its own buffer (`LAYER_L/R`) and the mix is their sum;
-  `en_render_stems` hands them out as 16-bit. Without `EN_STEMS` the engine is as it was, sample for
+  `en_render_usb` hands them out as 16-bit. Without `EN_STEMS` the engine is as it was, sample for
   sample.
 - `usb.c`: the ring and the resampler carry frames of 10 channels (`ua_frame_t`); the ring is 1024
   frames rather than 2048 (20 KB, as RAM allows); the stream is serviced every tick.

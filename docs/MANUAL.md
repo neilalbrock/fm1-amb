@@ -100,7 +100,7 @@ The drawing at the top shows them all; here they are in more detail.
 | PRESETS | The piece (see [The pieces](#s6)). |
 | KNOB 1–4 | The four values on the screen. A few clicks are always single steps; a quick turn speeds up, so half a turn sweeps the range. |
 | OCT− / OCT+ | The bells' octave, two down to two up, from any page. |
-| MASTER | Volume. |
+| MASTER | Volume. The USB audio input stays at a steady line level whatever MASTER says. |
 | SAVE | Saves all eight pieces. Held for 1.5 s: puts the piece back to its recipe. |
 
 **Help:** hold any button but PLAY for a second and a card says what it does. A key, a knob or
