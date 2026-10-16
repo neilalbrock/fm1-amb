@@ -40,31 +40,44 @@ The [manual](https://charlesvestal.github.io/fm1-amb/manual/) has the rest.
 ## The layers over USB (stems)
 
 Plugged into a computer, the FM-1 is also an audio input: AMB-1's master as 16-bit stereo at
-44.1 kHz, ready to record over the cable. The stems firmware makes it ten channels, so the layers
-can be recorded apart:
+44.1 kHz, ready to record over the cable. It comes at a steady line level, where MASTER would sit at
+about 70%, whatever the knob says: MASTER sets only what the FM-1 itself plays. The stems firmware
+makes it ten channels, so the layers can be recorded apart:
 
 | Channels | |
 |---|---|
-| 1–2 | the master, as you hear it |
+| 1–2 | the master, at the line level |
 | 3–4 | the pad |
 | 5–6 | the bells |
 | 7–8 | the bass (mono, the same on both) |
 | 9–10 | the pulse |
 
 The layers are dry: the echo, the tape loop and the plate are shared by all four, so only the master
-has them. They follow the MASTER knob, as the master does. USB MIDI works beside them as before.
+has them. They come at the master's line level, whatever the MASTER knob. USB MIDI works beside them
+as before.
 
-To install it, take `amb-1.2.1-stems-10ch.fwsc` from this fork's
+To install it, take `amb-1.2.2-stems-10ch.fwsc` from this fork's
 [releases](https://github.com/neilalbrock/fm1-amb/releases) and, with the FM-1 plugged in:
 
 ```
-pip3 install mido python-rtmidi
-python3 tools/fm1_install.py amb-1.2.1-stems-10ch.fwsc
+python3 -m pip install mido python-rtmidi
+python3 tools/fm1_install.py amb-1.2.2-stems-10ch.fwsc
 ```
 
 or build it yourself with `EN_STEMS=1 ./build.sh`. (The web installer puts on the stereo AMB-1.)
 Recording apps then see "AMB-1 FM-1" with ten inputs; `tools/uac_stems.py` records them to a file
 and checks them. What was measured on the way, and what's next: [docs/USB-AUDIO.md](docs/USB-AUDIO.md).
+
+If the installer says it needs mido and python-rtmidi though they are installed, `pip3` put them into
+another Python than the one `python3` starts (common with Homebrew, pyenv and the python.org installer
+side by side): `python3 -m pip` installs into the one that runs the installer. Homebrew's Python refuses
+`pip install`; a virtual environment takes them instead:
+
+```
+python3 -m venv .venv
+.venv/bin/pip install mido python-rtmidi
+.venv/bin/python tools/fm1_install.py amb-1.2.2-stems-10ch.fwsc
+```
 
 ## Building and testing
 
